@@ -5,9 +5,12 @@ int init_module()
 {
   printk(KERN_INFO "Loaded\n");
   return 0;
+
 }
 
 void cleanup_module()
 {
-  printk(KEN_INFO "Unloaded\n");
+  printk(KERN_INFO "Unloaded\n");
 }
+
+
