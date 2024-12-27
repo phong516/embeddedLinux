@@ -13,8 +13,6 @@ static const char gs_device_name[] = "Hello-Driver";
 static const char gs_data[] = "HELLO";
 static const ssize_t gi_data_size = sizeof(gs_data);
 
-static struct class 
-
 static ssize_t device_file_read(struct file *, char *, size_t, loff_t *);
 static int my_init(void);
 static void my_exit(void);

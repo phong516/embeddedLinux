@@ -1,4 +1,4 @@
-TARGET_MODULE:=major_minor_number
+TARGET_MODULE:=file_operation
 obj-m:=$(TARGET_MODULE).o
 BUILDSYSTEM_DIR:=/lib/modules/$(shell uname -r)/build
 PWD:=$(shell pwd)
