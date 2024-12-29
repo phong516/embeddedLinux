@@ -65,7 +65,7 @@ static ssize_t device_file_read(struct file * file_ptr, char __user * user_buffe
 	{
 		return -1;
 	}
-	/**pos += len;*/
+	*pos += len;
 	return 0;
 }
 

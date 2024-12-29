@@ -73,7 +73,7 @@ int __init hello_init(void)
 		goto label_remove_device;
 	}
 	memset(g_kernel_buffer, 0, g_mem_size);
-	strcpy(g_kernel_buffer, "HELLO WORLD Fops");
+	strcpy(g_kernel_buffer, "HELLO WORLD Fops\n");
 	
 	return 0;
 
@@ -100,43 +100,29 @@ void __exit hello_exit(void) {
 static ssize_t hello_read(struct file * file, char __user * buff, size_t len, loff_t * pos)
 {
 	pr_info("HELLO READ\n");
-	if (*pos >= g_mem_size)	
+	ssize_t bytes = len < (g_mem_size - (*pos)) ? len : (g_mem_size - (*pos));
+	if (copy_to_user(buff, g_kernel_buffer, bytes))
 	{
-		pr_warn("Read position exceeds data\n");
-		return 0;
+		return -EFAULT;
 	}
-	if (*pos + len > g_mem_size)
-	{
-		pr_warn("Read len exceeds data\n");
-		len = g_mem_size - *pos; 
-	}
-	if (copy_to_user(buff, g_kernel_buffer, g_mem_size) != 0)
-	{
-		pr_err("Can not read data\n");	
-		return -1;
-	}
-	*pos += len;
-	return len;
+	(*pos) += bytes;
+	return bytes;
 }
 
 static ssize_t hello_write(struct file *file, const char __user * buff, size_t len, loff_t * pos)
 {
-	pr_info("HELLO WRITE\n");	
-	if (*pos >= g_mem_size)	
+	pr_info("HELLO WRITE\n");
+	pr_info("Len %i, Pos %lli\n", len, *pos);
+	if ((*pos) < sizeof(g_kernel_buffer))
 	{
-		pr_warn("Write position exceeds data\n");
-		return 0;
+		memset(g_kernel_buffer + (*pos) + len, '\0', g_mem_size - (*pos) - len);
 	}
-	if (*pos + len > g_mem_size)
-	{
-		pr_warn("Write len exceeds data\n");
-		len = g_mem_size - *pos; 
-	}
-	if(copy_from_user(g_kernel_buffer, buff, len) != 0)
+	if(copy_from_user(g_kernel_buffer + (*pos), buff, len) != 0)
 	{
 		pr_err("Can not write data\n");
-		return -1;
+		return -EFAULT;
 	}
+	(*pos) += len;
 	return len;
 }
 static int hello_ioctl(struct inode * hello_inode, struct file * hello_file, unsigned int hello_int, unsigned long hello_long)
