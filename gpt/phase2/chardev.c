@@ -4,6 +4,8 @@
 #include <linux/fs.h>
 #include <linux/device.h>
 #include <linux/err.h>
+#include <linux/uaccess.h>
+#include <linux/string.h>
 
 MODULE_LICENSE("GPL");
 
@@ -11,16 +13,24 @@ MODULE_LICENSE("GPL");
 
 static int open(struct inode *, struct file *);
 static int release(struct inode *, struct file *);
+static ssize_t write(struct file *, const char __user *, size_t, loff_t *);
+static ssize_t read(struct file *, char __user *, size_t, loff_t *);
 
 static struct cdev g_cdev;
 static dev_t g_dev;
 static struct class * g_class;
 static struct device * g_device;
+
+#define BUFFER_LEN 256
+char g_kernel_buffer[BUFFER_LEN] = {'\0'};
+
 static struct file_operations fops = 
 {
 	.owner = THIS_MODULE,
 	.open = open,
 	.release = release,
+    .write = write,
+    .read = read,
 };
 
 static int __init chardev_init(void)
@@ -84,3 +94,35 @@ static int release(struct inode * p_inode, struct file * p_file)
 	return 0;
 }
 
+static ssize_t write(struct file * p_file, const char __user * c_buffer, size_t size, loff_t * l_offset)
+{
+    if (copy_from_user(g_kernel_buffer, c_buffer, size))
+	{
+		return -EFAULT;
+	}
+
+    g_kernel_buffer[size] = '\0';
+    printk(KERN_INFO "CHARDEV: Write %s\n", g_kernel_buffer);
+    return size;
+}
+
+static ssize_t read(struct file * p_file, char __user * c_buffer, size_t size, loff_t * l_offset)
+{
+	size_t len = strnlen(g_kernel_buffer, BUFFER_LEN);
+	if (*l_offset >= len)
+	{
+		return 0;
+	}
+
+	if (size > len - *l_offset)
+	{
+		size = len - *l_offset;
+	}
+	if (copy_to_user(c_buffer, g_kernel_buffer + *l_offset, size))
+	{
+		return -EFAULT;
+	}
+    printk(KERN_INFO "CHARDEV: Read\n");
+	*l_offset += size;
+    return size;
+}

@@ -1,6 +1,6 @@
 obj-m += chardev.o
 
-KERNEL_DIR = /home/phong/linux-6.9
+KERNEL_DIR = /home/phong/linux
 
 all:
 	make -C $(KERNEL_DIR) M=$(PWD) modules
