@@ -5,6 +5,7 @@
 #include <linux/device.h>
 #include <linux/err.h>
 #include <linux/uaccess.h>
+#include <linux/string.h>
 
 MODULE_LICENSE("GPL");
 
@@ -21,8 +22,7 @@ static struct class * g_class;
 static struct device * g_device;
 
 #define BUFFER_LEN 256
-static size_t g_buffer_len = 0;
-static char g_kernel_buffer[BUFFER_LEN] = {'\0'};
+static char g_kernel_buffer[BUFFER_LEN] = "HAPPY TOGETHER\n";
 
 static struct file_operations fops = 
 {
@@ -96,7 +96,7 @@ static int release(struct inode * p_inode, struct file * p_file)
 
 static ssize_t write(struct file * p_file, const char __user * c_buffer, size_t size, loff_t * l_offset)
 {
-	printk(KERN_INFO "size: %zu, l_offset: %llu\n", size, *l_offset);	
+	//printk(KERN_INFO "size: %zu, l_offset: %llu\n", size, *l_offset);	
 	if (size > BUFFER_LEN)
 	{
 		size = BUFFER_LEN - 1;
@@ -105,31 +105,37 @@ static ssize_t write(struct file * p_file, const char __user * c_buffer, size_t 
 	{
 		return -EFAULT;
 	}
-
+	*l_offset = size;
     g_kernel_buffer[size] = '\0';
-    g_buffer_len = size;
-    printk(KERN_INFO "CHARDEV: Write %s\n", g_kernel_buffer);
+    //printk(KERN_INFO "CHARDEV: Write %s\n", g_kernel_buffer);
+	printk(KERN_INFO "CHARDEV: Write\n");
     return size;
 }
 
 static ssize_t read(struct file * p_file, char __user * c_buffer, size_t size, loff_t * l_offset)
 {
-	printk(KERN_INFO "CHARDEV: size: %zu, len: %zu, l_offset: %lld\n", size, g_buffer_len, *l_offset);
-
-	if (g_buffer_len == 0)
+	size_t buffer_size = strnlen(g_kernel_buffer, BUFFER_LEN);
+	//printk(KERN_INFO "CHARDEV: size: %zu, len: %zu, l_offset: %lld\n", size, buffer_size, *l_offset);
+	if (buffer_size == 0)
 	{
 		return 0;
 	}
 
-	if (size > g_buffer_len - *l_offset)
+	if (*l_offset >= buffer_size)
 	{
-		size = g_buffer_len - *l_offset;
+		return 0;
+	}
+
+	if (size > buffer_size - *l_offset)
+	{
+		size = buffer_size - *l_offset;
 	}
 	if (copy_to_user(c_buffer, g_kernel_buffer + *l_offset, size))
 	{
 		return -EFAULT;
 	}
 	*l_offset += size;
-    	printk(KERN_INFO "CHARDEV: l_offset: %lld, read %s\n", *l_offset, c_buffer);
-	return *l_offset >= g_buffer_len ? 0 : size;
+    //printk(KERN_INFO "CHARDEV: l_offset: %lld, read %s\n", *l_offset, c_buffer);
+	printk(KERN_INFO "CHARDEV: Read\n");
+	return size;
 }
